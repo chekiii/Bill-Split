@@ -18,6 +18,7 @@
   background: #333;
   color: white;
   transition: border-color 0.2s;
+  min-width: 0;
 }
 
 .nameInput:focus {

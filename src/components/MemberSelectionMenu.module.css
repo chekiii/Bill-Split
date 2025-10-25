@@ -7,7 +7,7 @@
 
 .prompt {
     text-align: center;
-    color: #ffd54f; /* Using the highlight color from your old design system */
+    color: #ffd54f;
     font-weight: bold;
     background-color: #333;
     padding: 1rem;
@@ -21,21 +21,32 @@
   margin-top: 1rem;
 }
 
-/* Defines the layout for a single item row */
+/* --- DESKTOP STYLES (Default) --- */
 .itemRow {
   display: grid;
-  /* Columns: Name (flexible), Price (auto), TotalQty(auto), Selector (auto) */
-  grid-template-columns: 1fr auto auto auto;
+  grid-template-columns: 1fr auto auto; /* Name | Details | Selector */
   gap: 1rem;
   align-items: center;
   padding: 0.75rem;
   border: 1px solid var(--border-color);
   border-radius: 8px;
+  transition: background-color 0.2s;
+}
+
+.disabledRow {
+  opacity: 0.5;
 }
 
 .itemName {
   font-weight: bold;
-  word-break: break-word; /* Prevents long names from overflowing */
+  word-break: break-word;
+}
+
+.itemDetails {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  white-space: nowrap;
 }
 
 .itemPrice {
@@ -46,10 +57,8 @@
 .itemQtyTotal {
   font-size: 0.9rem;
   color: #aaa;
-  white-space: nowrap; /* Prevents "(of X)" from wrapping */
 }
 
-/* Styles for the +/- selector */
 .quantitySelector {
   display: flex;
   align-items: center;
@@ -85,6 +94,34 @@
 .myQty {
   font-size: 1.25rem;
   font-weight: bold;
-  min-width: 20px; /* Ensures layout doesn't shift for numbers 0-9 */
+  min-width: 20px;
   text-align: center;
+}
+
+/* --- RESPONSIVE STYLES for mobile --- */
+@media (max-width: 600px) {
+  .itemRow {
+    /* THE FIX: Explicitly tell the 'name' area to span two columns. */
+    grid-template-areas:
+      "name    name"
+      "details selector";
+    grid-template-columns: 1fr auto;
+    row-gap: 0.5rem;
+  }
+
+  /* Assign each element to its new area in the grid */
+  .itemName {
+    grid-area: name;
+    margin-bottom: 0.25rem;
+  }
+  
+  .itemDetails {
+    grid-area: details;
+    justify-content: flex-start;
+  }
+
+  .quantitySelector {
+    grid-area: selector;
+    flex-direction: row;
+  }
 }

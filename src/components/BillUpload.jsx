@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types';
-import styles from './BillUpload.module.css'; // Import CSS Module
+import styles from './BillUpload.module.css';
 
 /**
  * A styled and accessible component for uploading a bill image.
@@ -16,12 +16,8 @@ function BillUpload({ onImageSelect }) {
   return (
     <div className={`card ${styles.uploadCard}`}>
       <h2>1. Scan Your Bill</h2>
-      <p>Click the button below to use your camera or upload a photo.</p>
+      <p>Click the button below to use your camera or upload a photo from your gallery.</p>
       
-      {/* This is the professional way to style a file input.
-        The <label> is styled as a button, and the actual <input> is visually hidden.
-        The `htmlFor` attribute connects them for accessibility.
-      */}
       <label htmlFor="bill-upload-input" className="button">
         Select or Take Photo
       </label>
@@ -29,7 +25,8 @@ function BillUpload({ onImageSelect }) {
         id="bill-upload-input"
         type="file"
         accept="image/*"
-        capture="environment"
+        // REMOVED: The 'capture="environment"' attribute was here.
+        // Removing it allows mobile browsers to show the 'Choose from Gallery' option.
         onChange={handleFileChange}
         className={styles.hiddenInput} 
       />

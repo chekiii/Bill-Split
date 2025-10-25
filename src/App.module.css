@@ -3,6 +3,8 @@
   flex-direction: column;
   min-height: 100vh;
   width: 100%;
+
+  overflow-x: hidden;
 }
 
 .header {
@@ -31,6 +33,7 @@
   width: 100%;
   max-width: 600px; /* Constrain content width on larger screens */
   margin: 0 auto;
+  box-sizing: border-box;
 }
 
 /* Container for step 3 to hold both components */

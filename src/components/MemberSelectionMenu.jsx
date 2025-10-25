@@ -29,8 +29,12 @@ function MenuItemClaimRow({ item, activePersonId, onAssignmentChange, isDisabled
   return (
     <div className={`${styles.itemRow} ${isDisabled ? styles.disabledRow : ''}`}>
       <span className={styles.itemName}>{item.name}</span>
-      <span className={styles.itemPrice}>${item.price.toFixed(2)}</span>
-      <span className={styles.itemQtyTotal}>(of {item.totalQty})</span>
+
+      <div className={styles.itemDetails}>
+        <span className={styles.itemPrice}>${item.price.toFixed(2)}</span>
+        <span className={styles.itemQtyTotal}>(of {item.totalQty})</span>
+      </div>
+      
       <div className={styles.quantitySelector}>
         <button onClick={handleDecrement} disabled={isDisabled || myQty === 0}>-</button>
         <span className={styles.myQty}>{myQty}</span>
