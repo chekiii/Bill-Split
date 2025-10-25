@@ -1,0 +1,158 @@
+.summaryCard {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.controls {
+  display: flex;
+  justify-content: space-around;
+  gap: 1rem;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.formGroup label {
+  font-size: 0.875rem;
+  color: #ccc;
+}
+
+.formGroup input {
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  background: #333;
+  color: white;
+  font-size: 1.25rem;
+  text-align: center;
+}
+
+/* Hide the number input arrows */
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+}
+
+.resultsList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.personResultCard {
+  background: #3a3a3a;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.personResultCard h3 {
+  margin: 0 0 1rem 0;
+  color: var(--primary-color);
+}
+
+.breakdown {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.25rem 1rem;
+  font-size: 0.9rem;
+  color: #ddd;
+}
+
+.breakdown span:nth-child(odd) {
+  text-align: left;
+}
+
+.breakdown span:nth-child(even) {
+  text-align: right;
+  font-family: monospace;
+}
+
+.personTotal {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  font-weight: bold;
+  font-size: 1.25rem;
+}
+
+.grandTotal {
+  font-size: 1.5rem;
+  padding: 1rem;
+  background-color: #1a1a1a;
+  border-radius: 8px;
+  text-align: center;
+}
+
+/* --- Add these new styles to your existing CSS file --- */
+
+.itemsSection {
+  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.itemDetailRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  color: #ddd;
+}
+
+.itemDetailRow span:first-child {
+  /* Item name and quantity */
+  text-align: left;
+}
+
+.itemDetailRow span:last-child {
+  /* Price for that item share */
+  font-family: monospace;
+  text-align: right;
+}
+
+/* --- Add these new styles to your ResultSummary.module.css file --- */
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.cardHeader h3 {
+  margin: 0;
+}
+
+.pingButtonSmall {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
+  background-color: #007BFF;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.2s;
+}
+
+.pingButtonSmall:hover {
+  background-color: #0056b3;
+}
+

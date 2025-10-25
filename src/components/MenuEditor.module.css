@@ -1,0 +1,247 @@
+.editorContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+/* NEW: Styles for the member count input */
+.memberCountInput {
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 1.25rem;
+  text-align: center;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: #333;
+  color: white;
+  margin-top: 0.5rem;
+}
+
+.itemsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+/* THE FIX: Adjusted grid columns for better spacing */
+.itemHeader,
+.itemRow {
+  display: grid;
+  /* Columns: Name (4 units), Price (1.5 units), Qty (1 unit), Remove button (fixed 40px) */
+  grid-template-columns: minmax(120px, 1.8fr) minmax(60px, 0.8fr) minmax(50px, 0.3fr) 40px;
+  column-gap: 2.5rem; /* Increased gap slightly */
+  row-gap: 2rem;
+  align-items: center;
+  width: 100%;
+  
+}
+
+.itemHeader {
+  padding: 0 0.5rem;
+  font-weight: bold;
+  color: #ccc;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+}
+
+.itemHeader span:nth-child(2),
+.itemHeader span:nth-child(3) {
+  text-align: right;
+}
+
+.itemRow input {
+  padding: 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: #333;
+  color: white;
+  font-size: 1rem;
+  width: 100%;
+}
+
+.inputName {
+  text-align: left;
+}
+
+.inputPrice,
+.inputQty {
+  text-align: right;
+}
+
+.itemRow input[type='number']::-webkit-inner-spin-button,
+.itemRow input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.itemRow input[type='number'] {
+  -moz-appearance: textfield;
+}
+
+.removeBtn {
+  background: #5c2c2c;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  font-size: 1.5rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+  justify-self: center;
+}
+
+.removeBtn:hover {
+  background: #8b3f3f;
+}
+
+.addItemBtn {
+  background: none;
+  border: 1px dashed var(--border-color);
+  color: #ccc;
+  width: 100%;
+  padding: 0.75rem;
+  margin-top: 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.addItemBtn:hover {
+  background: #333;
+  color: white;
+}
+
+/* --- Add these new styles to your existing CSS file --- */
+
+.summarySection {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.summaryRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 1rem;
+  color: #ccc;
+}
+
+.summaryRow span:last-child {
+  font-family: monospace;
+}
+
+.totalRow {
+  font-weight: bold;
+  font-size: 1.1rem;
+  color: white;
+  margin-top: 0.5rem;
+}
+
+.taxCheckbox {
+  margin-top: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  background-color: #333;
+  padding: 0.75rem;
+  border-radius: 8px;
+}
+
+.taxCheckbox input[type="checkbox"] {
+  /* Custom checkbox styles */
+  appearance: none;
+  background-color: #555;
+  margin: 0;
+  font: inherit;
+  color: currentColor;
+  width: 1.25em;
+  height: 1.25em;
+  border: 0.15em solid #555;
+  border-radius: 0.25em;
+  transform: translateY(-0.075em);
+  display: grid;
+  place-content: center;
+  cursor: pointer;
+}
+
+.taxCheckbox input[type="checkbox"]::before {
+  content: "";
+  width: 0.75em;
+  height: 0.75em;
+  transform: scale(0);
+  transition: 120ms transform ease-in-out;
+  box-shadow: inset 1em 1em var(--primary-color);
+  background-color: var(--primary-color);
+  transform-origin: bottom left;
+  clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+}
+
+.taxCheckbox input[type="checkbox"]:checked::before {
+  transform: scale(1);
+}
+
+.taxCheckbox label {
+  cursor: pointer;
+  font-weight: 500;
+}
+
+/* --- Add this new style to your MenuEditor.module.css file --- */
+
+.taxInput {
+  background: #333;
+  color: white;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0.5rem;
+  font-size: 1.1rem;
+  font-weight: bold;
+  font-family: monospace;
+  text-align: right;
+  width: 120px; /* Gives it a fixed width */
+}
+
+/* --- Add this at the end of MenuEditor.module.css --- */
+
+/* Styles for screens smaller than 600px */
+@media (max-width: 600px) {
+  .itemRow {
+    /* Change the grid to a more complex layout for stacking */
+    grid-template-areas:
+      "name name remove"
+      "price qty remove";
+    /* Define the columns for the new layout */
+    grid-template-columns: 1fr 1fr 40px;
+    row-gap: 0.75rem; /* Add a gap between the stacked rows */
+  }
+
+  /* Assign each input to its new area in the grid */
+  .itemRow .inputName {
+    grid-area: name;
+  }
+  .itemRow .inputPrice {
+    grid-area: price;
+  }
+  .itemRow .inputQty {
+    grid-area: qty;
+  }
+  .itemRow .removeBtn {
+    grid-area: remove;
+    /* Ensure the remove button is vertically centered in its new space */
+    align-self: center;
+  }
+
+  .itemHeader {
+    /* Hide the text header on mobile to save space, the inputs are clear enough */
+    display: none;
+  }
+}

@@ -1,0 +1,84 @@
+.appContainer {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.header {
+  padding: 1rem;
+  text-align: center;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.header h1 {
+  margin: 0;
+}
+
+.stepIndicator {
+    font-size: 0.9rem;
+    color: #aaa;
+    margin-top: 0.25rem;
+}
+
+.mainContent {
+  flex: 1;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  width: 100%;
+  max-width: 600px; /* Constrain content width on larger screens */
+  margin: 0 auto;
+}
+
+/* Container for step 3 to hold both components */
+.editStepContainer {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 1.5rem;
+}
+
+.navigation {
+  display: flex;
+  justify-content: space-around;
+  padding: 1rem;
+  border-top: 1px solid var(--border-color);
+  background-color: #1a1a1a;
+  position: sticky;
+  bottom: 0;
+  width: 100%;
+  gap: 1rem;
+}
+
+.navigation .button {
+  flex: 1;
+  padding: 1rem;
+  font-size: 1.1rem;
+  font-weight: bold;
+  
+}
+
+.navigation .button:disabled {
+    background-color: #444;
+    cursor: not-allowed;
+    border-color: transparent;
+    color: #888;
+}
+
+/* --- Add this entire block at the end of your App.module.css file --- */
+
+/* Styles specifically for mobile phones (480px and below) */
+@media (max-width: 480px) {
+  .navigation {
+    /* Reduce the padding inside the footer bar */
+    padding: 0.75rem;
+  }
+
+  .navigation .button {
+    /* Make the button text slightly smaller on small phones */
+    font-size: 1rem;
+  }
+}

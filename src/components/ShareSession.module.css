@@ -1,0 +1,33 @@
+.shareCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  text-align: center;
+}
+
+.linkContainer {
+  width: 100%;
+}
+
+.linkInput {
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 1rem;
+  text-align: center;
+  background-color: #333;
+  color: #ccc;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-family: monospace;
+}
+
+.buttonGroup {
+  display: flex;
+  gap: 1rem;
+  width: 100%;
+}
+
+.buttonGroup .button {
+  flex: 1;
+}

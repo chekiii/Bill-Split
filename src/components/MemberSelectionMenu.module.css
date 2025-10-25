@@ -1,0 +1,90 @@
+.selectionContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.prompt {
+    text-align: center;
+    color: #ffd54f; /* Using the highlight color from your old design system */
+    font-weight: bold;
+    background-color: #333;
+    padding: 1rem;
+    border-radius: 8px;
+}
+
+.itemsList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+/* Defines the layout for a single item row */
+.itemRow {
+  display: grid;
+  /* Columns: Name (flexible), Price (auto), TotalQty(auto), Selector (auto) */
+  grid-template-columns: 1fr auto auto auto;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.itemName {
+  font-weight: bold;
+  word-break: break-word; /* Prevents long names from overflowing */
+}
+
+.itemPrice {
+  font-family: monospace;
+  color: #ccc;
+}
+
+.itemQtyTotal {
+  font-size: 0.9rem;
+  color: #aaa;
+  white-space: nowrap; /* Prevents "(of X)" from wrapping */
+}
+
+/* Styles for the +/- selector */
+.quantitySelector {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background-color: #333;
+  border-radius: 20px;
+  padding: 0.25rem;
+}
+
+.quantitySelector button {
+  background-color: #4f4f4f;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.quantitySelector button:hover:not(:disabled) {
+  background-color: #666;
+}
+
+.quantitySelector button:disabled {
+  background-color: #2a2a2a;
+  color: #555;
+  cursor: not-allowed;
+}
+
+.myQty {
+  font-size: 1.25rem;
+  font-weight: bold;
+  min-width: 20px; /* Ensures layout doesn't shift for numbers 0-9 */
+  text-align: center;
+}

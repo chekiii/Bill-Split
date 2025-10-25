@@ -1,0 +1,36 @@
+.errorCard {
+  width: 100%;
+  background-color: #5c2c2c;
+  color: #f8a5a5;
+  border: 1px solid #8b3f3f;
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  text-align: center;
+}
+
+.errorMessage {
+  margin: 0;
+  font-weight: 500;
+}
+
+.dismissButton {
+  /* Reusing button styles from App.css but with specific colors */
+  border-radius: 8px;
+  border: 1px solid #f8a5a5;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #8b3f3f;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.25s;
+}
+
+.dismissButton:hover {
+  background-color: #5c2c2c;
+}
