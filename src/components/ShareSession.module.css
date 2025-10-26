@@ -31,3 +31,18 @@
 .buttonGroup .button {
   flex: 1;
 }
+
+/* ... (all your existing styles for .shareCard, .linkInput, etc.) ... */
+
+/* NEW: Add this style for the QR code container */
+.qrContainer {
+  background-color: white; /* Ensures the QR code has a solid white background for scannability */
+  padding: 1rem;
+  border-radius: 8px;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  /* Centers the QR code canvas element which is rendered by the library */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}

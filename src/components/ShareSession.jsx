@@ -1,15 +1,12 @@
 import { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
+// 1. Import the new library
+import QRCode from 'react-qr-code';
 import styles from './ShareSession.module.css';
 
-/**
- * A component to display the shareable link for the bill session.
- * @param {{ sessionId: string }} props
- */
 function ShareSession({ sessionId }) {
   const [copyButtonText, setCopyButtonText] = useState('Copy Link');
 
-  // Construct the full shareable URL
   const shareUrl = useMemo(() => {
     return `${window.location.origin}/bill/${sessionId}`;
   }, [sessionId]);
@@ -21,9 +18,6 @@ function ShareSession({ sessionId }) {
     });
   };
 
-  /**
-   * Uses the native Web Share API on supported devices (mostly mobile).
-   */
   const handleNativeShare = async () => {
     if (navigator.share) {
       try {
@@ -36,16 +30,26 @@ function ShareSession({ sessionId }) {
         console.error('Error sharing:', error);
       }
     } else {
-      // Fallback for desktop browsers that don't support the Share API
       alert("Sharing is not supported on this browser. Please copy the link.");
     }
   };
 
   return (
     <div className={`card ${styles.shareCard}`}>
-      <h2>3. Share the Link</h2>
-      <p>Send this link to your friends so they can join and select their items.</p>
+      <h2>3. Share with Friends</h2>
+      <p>Your friends can scan this code or use the link below to join.</p>
 
+      <div className={styles.qrContainer}>
+        {/* 2. Use the new <QRCode> component. The props are simpler. */}
+        <QRCode
+          value={shareUrl}
+          size={192}
+          bgColor="#FFFFFF"
+          fgColor="#000000"
+          level="L"
+        />
+      </div>
+      
       <div className={styles.linkContainer}>
         <input type="text" value={shareUrl} readOnly className={styles.linkInput} />
       </div>
@@ -54,7 +58,6 @@ function ShareSession({ sessionId }) {
         <button onClick={handleCopyLink} className="button">
           {copyButtonText}
         </button>
-        {/* Only show the native share button if the browser supports it */}
         {navigator.share && (
           <button onClick={handleNativeShare} className="button">
             Share...
