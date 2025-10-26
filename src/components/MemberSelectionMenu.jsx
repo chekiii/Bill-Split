@@ -2,43 +2,111 @@ import PropTypes from 'prop-types';
 import PeopleSelector from './PeopleSelector';
 import styles from './MemberSelectionMenu.module.css';
 
-// --- Sub-Component for a single item row for members to claim ---
+// --- Sub-Component for a single item row with Share Mode logic ---
 
-function MenuItemClaimRow({ item, activePersonId, onAssignmentChange, isDisabled }) {
-  // Calculate how many units of this item have already been assigned to everyone.
-  const totalAssigned = Object.values(item.assignments || {}).reduce((sum, qty) => sum + qty, 0);
-  const remainingQty = item.totalQty - totalAssigned;
+function MenuItemClaimRow({
+  item,
+  activePersonId,
+  activeShareMode,
+  onAssignmentChange,
+  onInitiateShare,
+  onSetActiveShareMode,
+  isDisabled
+}) {
+  const hasSharedPortion = item.sharedPortion && item.sharedPortion.quantity > 0;
+  const isShareModeActive = activeShareMode === item.id;
 
-  // Get the quantity this specific active user has claimed.
-  const myQty = activePersonId ? (item.assignments?.[activePersonId] || 0) : 0;
+  // --- Calculate Remaining Quantities ---
+  const individualAssignments = Object.values(item.assignments || {}).reduce((sum, qty) => sum + qty, 0);
+  const sharedAssignments = hasSharedPortion ? item.sharedPortion.sharers.length : 0;
+  
+  const remainingIndividualQty = item.totalQty - (hasSharedPortion ? item.sharedPortion.quantity : 0) - individualAssignments;
+  const remainingSharedSlots = hasSharedPortion ? item.sharedPortion.shareCount - sharedAssignments : 0;
 
+  // --- Get Quantities for the Active Person ---
+  const myIndividualQty = activePersonId ? (item.assignments?.[activePersonId] || 0) : 0;
+  const iAmInShare = hasSharedPortion && activePersonId ? item.sharedPortion.sharers.includes(activePersonId) : false;
+
+  // --- Handlers ---
   const handleIncrement = () => {
-    // A user can only increment if they are active and there are items remaining.
-    if (activePersonId && remainingQty > 0) {
-      onAssignmentChange(item.id, activePersonId, myQty + 1);
+    if (!activePersonId) return;
+    if (isShareModeActive) {
+      if (remainingSharedSlots > 0 && !iAmInShare) {
+        onAssignmentChange(item.id, activePersonId, true, false); // Join a share
+      }
+    } else {
+      if (remainingIndividualQty > 0) {
+        onAssignmentChange(item.id, activePersonId, false, false); // Claim an individual item
+      }
     }
   };
 
   const handleDecrement = () => {
-    // A user can only decrement if they are active and have claimed at least one.
-    if (activePersonId && myQty > 0) {
-      onAssignmentChange(item.id, activePersonId, myQty - 1);
+    if (!activePersonId) return;
+    if (isShareModeActive) {
+      if (iAmInShare) {
+        onAssignmentChange(item.id, activePersonId, true, true); // Leave a share
+      }
+    } else {
+      if (myIndividualQty > 0) {
+        onAssignmentChange(item.id, activePersonId, false, true); // Remove an individual item
+      }
     }
   };
 
+  const handleShareClick = () => {
+    if (isDisabled) return;
+    if (hasSharedPortion) {
+      // If a share is already set up, this button toggles share mode
+      onSetActiveShareMode(isShareModeActive ? null : item.id);
+    } else {
+      // If no share is set up, this initiates one
+      const qtyToShare = prompt(`How many units of the ${item.name} were shared?`, 1);
+      const qty = parseInt(qtyToShare, 10);
+      if (!qty || qty <= 0 || qty > item.totalQty) {
+        alert(`Invalid quantity. Must be between 1 and ${item.totalQty}.`);
+        return;
+      }
+
+      const peopleToShare = prompt(`How many people shared those ${qty} unit(s)?`, 2);
+      const peopleCount = parseInt(peopleToShare, 10);
+      if (!peopleCount || peopleCount < 2) {
+        alert("A share must involve at least 2 people.");
+        return;
+      }
+      onInitiateShare(item.id, qty, peopleCount);
+    }
+  };
+
+  // --- Dynamic Button Text & Styles ---
+  let shareButtonText = "🔀";
+  if (hasSharedPortion) {
+    shareButtonText = `Shared (${item.sharedPortion.shareCount})`;
+  }
+
   return (
     <div className={`${styles.itemRow} ${isDisabled ? styles.disabledRow : ''}`}>
-      <span className={styles.itemName}>{item.name}</span>
+      <span className={styles.itemName}>{item.name}
+        &nbsp;
+        <button 
+          onClick={handleShareClick}
+          className={`${styles.shareButton} ${isShareModeActive ? styles.shareActive : ''}`}
+          title="Split this item"
+          disabled={isDisabled}
+        >
+          {shareButtonText}
+        </button>
+      </span>
 
       <div className={styles.itemDetails}>
         <span className={styles.itemPrice}>${item.price.toFixed(2)}</span>
         <span className={styles.itemQtyTotal}>(of {item.totalQty})</span>
       </div>
-      
+       
       <div className={styles.quantitySelector}>
-        <button onClick={handleDecrement} disabled={isDisabled || myQty === 0}>-</button>
-        <span className={styles.myQty}>{myQty}</span>
-        <button onClick={handleIncrement} disabled={isDisabled || remainingQty <= 0}>+</button>
+        <button onClick={handleDecrement} disabled={isDisabled || (isShareModeActive ? !iAmInShare : myIndividualQty === 0)}>-</button>
+        <span className={styles.myQty}>{isShareModeActive ? (iAmInShare ? 1 : 0) : myIndividualQty}</span>
+        <button onClick={handleIncrement} disabled={isDisabled || (isShareModeActive ? remainingSharedSlots <= 0 || iAmInShare : remainingIndividualQty <= 0)}>+</button>
       </div>
     </div>
   );
@@ -47,34 +115,34 @@ function MenuItemClaimRow({ item, activePersonId, onAssignmentChange, isDisabled
 MenuItemClaimRow.propTypes = {
   item: PropTypes.object.isRequired,
   activePersonId: PropTypes.string,
+  activeShareMode: PropTypes.string,
   onAssignmentChange: PropTypes.func.isRequired,
+  onInitiateShare: PropTypes.func.isRequired,
+  onSetActiveShareMode: PropTypes.func.isRequired,
   isDisabled: PropTypes.bool.isRequired,
 };
 
 
 // --- Main MemberSelectionMenu Component ---
 
-function MemberSelectionMenu({
-  items,
-  people,
-  activePersonId,
-  onItemsUpdate,
-  onPeopleUpdate,
-  onSetActivePerson,
-}) {
+function MemberSelectionMenu({ items, people, activePersonId, activeShareMode, onItemsUpdate, onPeopleUpdate, onSetActivePerson, onInitiateShare, onSetActiveShareMode }) {
 
-  /**
-   * Updates the 'assignments' for a specific item.
-   */
-  const handleAssignmentChange = (itemId, personId, newQty) => {
+  const handleAssignmentChange = (itemId, personId, isJoiningShare, isRemoving = false) => {
     const updatedItems = items.map(item => {
       if (item.id === itemId) {
-        const newAssignments = { ...item.assignments, [personId]: newQty };
-        // Clean up the assignment if the quantity is zero
-        if (newQty === 0) {
-          delete newAssignments[personId];
+        if (isJoiningShare) {
+          const sharers = item.sharedPortion.sharers || [];
+          const newSharers = isRemoving 
+            ? sharers.filter(id => id !== personId)
+            : [...sharers, personId];
+          return { ...item, sharedPortion: { ...item.sharedPortion, sharers: newSharers } };
+        } else {
+          const currentQty = item.assignments?.[personId] || 0;
+          const newQty = isRemoving ? currentQty - 1 : currentQty + 1;
+          const newAssignments = { ...item.assignments, [personId]: newQty };
+          if (newQty === 0) delete newAssignments[personId];
+          return { ...item, assignments: newAssignments };
         }
-        return { ...item, assignments: newAssignments };
       }
       return item;
     });
@@ -105,7 +173,10 @@ function MemberSelectionMenu({
               key={item.id}
               item={item}
               activePersonId={activePersonId}
+              activeShareMode={activeShareMode}
               onAssignmentChange={handleAssignmentChange}
+              onInitiateShare={onInitiateShare}
+              onSetActiveShareMode={onSetActiveShareMode}
               isDisabled={!activePersonId}
             />
           ))}
@@ -119,9 +190,12 @@ MemberSelectionMenu.propTypes = {
   items: PropTypes.arrayOf(PropTypes.object).isRequired,
   people: PropTypes.arrayOf(PropTypes.object).isRequired,
   activePersonId: PropTypes.string,
+  activeShareMode: PropTypes.string,
   onItemsUpdate: PropTypes.func.isRequired,
   onPeopleUpdate: PropTypes.func.isRequired,
   onSetActivePerson: PropTypes.func.isRequired,
+  onInitiateShare: PropTypes.func.isRequired,
+  onSetActiveShareMode: PropTypes.func.isRequired,
 };
 
 export default MemberSelectionMenu;

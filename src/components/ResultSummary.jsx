@@ -5,7 +5,6 @@ import styles from './ResultSummary.module.css';
 
 function ResultSummary({ items, people, detectedTaxes, personToViewId, onPingPayer }) {
   const [tipAmount, setTipAmount] = useState(0);
-  const [copyButtonText, setCopyButtonText] = useState('Copy Share Link');
 
   const totalTaxAmount = useMemo(
     () => (detectedTaxes || []).reduce((sum, tax) => sum + tax.amount, 0),
@@ -52,8 +51,15 @@ function ResultSummary({ items, people, detectedTaxes, personToViewId, onPingPay
       <ul className={styles.resultsList}>
         {summaryData.map((personSummary) => {
           const person = people.find(p => p.id === personSummary.personId);
-          const personItems = items.filter(
+
+          // Find items claimed individually
+          const individualItems = items.filter(
             (item) => item.assignments?.[personSummary.personId] > 0
+          );
+
+          // Find items claimed as part of a share
+          const sharedItems = items.filter(
+            (item) => item.sharedPortion?.sharers.includes(personSummary.personId)
           );
 
           return (
@@ -66,19 +72,35 @@ function ResultSummary({ items, people, detectedTaxes, personToViewId, onPingPay
                      onClick={() => onPingPayer(person.id)}
                      title={`Notify the payer that you're done.`}
                    >
-                     Ping Payer🔔
+                     Ping Payer
                    </button>
                 )}
               </div>
               
               <div className={styles.itemsSection}>
-                {personItems.map((item) => {
+                {/* Render Individual Items */}
+                {individualItems.map((item) => {
                   const quantity = item.assignments[personSummary.personId];
                   const pricePerUnit = item.totalQty > 0 ? item.price / item.totalQty : 0;
                   const itemTotal = pricePerUnit * quantity;
                   return (
-                    <div key={item.id} className={styles.itemDetailRow}>
+                    <div key={`${item.id}-individual`} className={styles.itemDetailRow}>
                       <span>{item.name} (x{quantity})</span>
+                      <span>${itemTotal.toFixed(2)}</span>
+                    </div>
+                  );
+                })}
+                
+                {/* Render Shared Items */}
+                {sharedItems.map((item) => {
+                  const pricePerUnit = item.totalQty > 0 ? item.price / item.totalQty : 0;
+                  const priceOfSharedUnits = pricePerUnit * item.sharedPortion.quantity;
+                  const itemTotal = priceOfSharedUnits / item.sharedPortion.shareCount;
+                  return (
+                    <div key={`${item.id}-shared`} className={styles.itemDetailRow}>
+                      <span className={styles.sharedItem}>
+                        {item.name} <span className={styles.sharedTag}>(shared)</span>
+                      </span>
                       <span>${itemTotal.toFixed(2)}</span>
                     </div>
                   );

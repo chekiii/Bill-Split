@@ -1,7 +1,14 @@
 import { useMemo } from 'react';
 
 /**
- * @typedef {{id: string, name: string, price: number, totalQty: number, assignments: {[personId: string]: number}}} Item
+ * @typedef {{
+ * id: string, 
+ * name: string, 
+ * price: number, 
+ * totalQty: number, 
+ * assignments: {[personId: string]: number},
+ * sharedPortion: { quantity: number, shareCount: number, sharers: string[] }
+ * }} Item
  * @typedef {{id: string, name: string}} Person
  * @typedef {{
  * personId: string,
@@ -14,7 +21,7 @@ import { useMemo } from 'react';
  */
 
 /**
- * A hook to calculate the bill split summary for each person.
+ * A hook to calculate the bill split summary for each person, including shared items.
  * @param {Item[]} items - The list of bill items.
  * @param {Person[]} people - The list of people splitting the bill.
  * @param {number} totalTaxAmount - The total fixed tax amount from the bill.
@@ -23,8 +30,9 @@ import { useMemo } from 'react';
  */
 export const useBillCalculator = (items, people, totalTaxAmount, totalTipAmount) => {
   return useMemo(() => {
+    // The total price of all items on the bill (the subtotal).
     const totalItemsPrice = items.reduce((sum, item) => sum + item.price, 0);
-    const numberOfPeople = people.length > 0 ? people.length : 1; // Prevents division by zero
+    const numberOfPeople = people.length > 0 ? people.length : 1;
 
     if (totalItemsPrice === 0) {
       return people.map(p => ({
@@ -34,20 +42,36 @@ export const useBillCalculator = (items, people, totalTaxAmount, totalTipAmount)
       }));
     }
 
-    // THE FIX: The tip share is now a simple, equal split.
+    // The tip is split equally among everyone who has joined.
     const tipSharePerPerson = totalTipAmount / numberOfPeople;
 
     const summaries = people.map((person) => {
-      const subtotal = items.reduce((personSum, item) => {
-        const assignedQty = item.assignments?.[person.id] || 0;
-        if (assignedQty === 0) return personSum;
-        const pricePerUnit = item.totalQty > 0 ? item.price / item.totalQty : 0;
-        return personSum + pricePerUnit * assignedQty;
-      }, 0);
+      let subtotal = 0;
 
-      const proportion = subtotal / totalItemsPrice;
+      // Iterate through each item to calculate this person's share.
+      items.forEach(item => {
+        const pricePerUnit = item.totalQty > 0 ? item.price / item.totalQty : 0;
+
+        // 1. Add cost from their INDIVIDUAL claims.
+        const individualQty = item.assignments?.[person.id] || 0;
+        if (individualQty > 0) {
+          subtotal += pricePerUnit * individualQty;
+        }
+
+        // 2. Add cost from their participation in SHARED portions.
+        const sharedPortion = item.sharedPortion;
+        if (sharedPortion && sharedPortion.sharers.includes(person.id)) {
+          const priceOfSharedUnits = pricePerUnit * sharedPortion.quantity;
+          const costPerSharer = sharedPortion.shareCount > 0 
+            ? priceOfSharedUnits / sharedPortion.shareCount 
+            : 0;
+          subtotal += costPerSharer;
+        }
+      });
+
+      // Calculate proportional tax and the final total.
+      const proportion = totalItemsPrice > 0 ? subtotal / totalItemsPrice : 0;
       const taxShare = totalTaxAmount * proportion;
-      // Use the pre-calculated equal tip share for everyone
       const total = subtotal + taxShare + tipSharePerPerson;
 
       return {
@@ -55,7 +79,7 @@ export const useBillCalculator = (items, people, totalTaxAmount, totalTipAmount)
         personName: person.name,
         subtotal,
         taxShare,
-        tipShare: tipSharePerPerson, // Assign the equal share
+        tipShare: tipSharePerPerson,
         total,
       };
     });

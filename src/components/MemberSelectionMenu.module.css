@@ -125,3 +125,26 @@
     flex-direction: row;
   }
 }
+
+
+.shareButton {
+  background: none;
+  border: 1px solid var(--border-color);
+  color: #ccc;
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.shareButton:hover {
+  border-color: var(--primary-color);
+  color: white;
+}
+
+.shareButton.shareActive {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color: white;
+  font-weight: bold;
+}

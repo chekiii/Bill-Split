@@ -156,3 +156,19 @@ input[type='number'] {
   background-color: #0056b3;
 }
 
+/* --- Add these new styles to your ResultSummary.module.css file --- */
+
+.sharedItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sharedTag {
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: #ffd54f;
+   /* Using a highlight color */
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+}

@@ -11,24 +11,32 @@ import ResultSummary from './components/ResultSummary';
 import ErrorNotification from './components/ui/ErrorNotification';
 
 function App() {
+  // State for managing the multi-step workflow
   const [currentStep, setCurrentStep] = useState(1);
   const [imageFile, setImageFile] = useState(null);
   const [error, setError] = useState('');
   const [sessionId, setSessionId] = useState(null);
+
+  // State for the Payer's setup
   const [memberCount, setMemberCount] = useState(2);
   const [manualTaxAmount, setManualTaxAmount] = useState(0);
   const [includeTax, setIncludeTax] = useState(true);
-  
+
+  // State for the Member's view
   const [people, setPeople] = useState([]);
-  
   const [activePersonId, setActivePersonId] = useState(null);
   const [summaryPersonId, setSummaryPersonId] = useState(null);
+  const [activeShareMode, setActiveShareMode] = useState(null); // State for the active share mode
+
+  // Central state for all data parsed from the bill
   const [billDetails, setBillDetails] = useState({
     items: [],
     subtotal: 0,
     taxes: [],
     grandTotal: 0,
   });
+
+  // --- HANDLER FUNCTIONS ---
 
   const handleReset = () => {
     setCurrentStep(1);
@@ -41,6 +49,7 @@ function App() {
     setSessionId(null);
     setManualTaxAmount(0);
     setIncludeTax(true);
+    setActiveShareMode(null);
     setBillDetails({ items: [], subtotal: 0, taxes: [], grandTotal: 0 });
   };
 
@@ -51,7 +60,18 @@ function App() {
   };
 
   const handleScanComplete = (scannedBill) => {
-    setBillDetails(scannedBill);
+    // Initialize the items with the more complex data structure needed for sharing
+    const itemsWithShareData = scannedBill.items.map(item => ({
+      ...item,
+      assignments: {},
+      sharedPortion: {
+        quantity: 0,
+        shareCount: 0,
+        sharers: [],
+      }
+    }));
+    setBillDetails({ ...scannedBill, items: itemsWithShareData });
+
     const detectedTaxTotal = (scannedBill.taxes || []).reduce((sum, tax) => sum + tax.amount, 0);
     setManualTaxAmount(detectedTaxTotal);
     setCurrentStep(3);
@@ -75,7 +95,7 @@ function App() {
 
     if (newPeople.length > people.length) {
       setActivePersonId(newPeople[newPeople.length - 1].id);
-    } else if (activePersonId && !newPeople.find(p => p.id === activePersonId)) {
+    } else if (activePersonId && !updatedPeople.find(p => p.id === activePersonId)) {
       setActivePersonId(null);
     }
   };
@@ -108,6 +128,24 @@ function App() {
     setCurrentStep(4);
   };
 
+  const handleInitiateShare = (itemId, quantity, shareCount) => {
+    const updatedItems = billDetails.items.map(item => {
+      if (item.id === itemId) {
+        return {
+          ...item,
+          sharedPortion: {
+            quantity,
+            shareCount,
+            sharers: [activePersonId], // Automatically add the initiator
+          }
+        };
+      }
+      return item;
+    });
+    handleItemsUpdate(updatedItems);
+    setActiveShareMode(itemId); // Activate share mode for this item
+  };
+
   const prevStep = () => {
     setSummaryPersonId(null);
     setCurrentStep((prev) => prev - 1);
@@ -115,9 +153,12 @@ function App() {
 
   const isAssignmentComplete = billDetails.items.every(item => {
     if (item.totalQty === 0) return true;
-    const totalAssigned = Object.values(item.assignments || {}).reduce((sum, qty) => sum + qty, 0);
-    return totalAssigned === item.totalQty;
+    const individualAssignments = Object.values(item.assignments || {}).reduce((sum, qty) => sum + qty, 0);
+    const sharedQuantity = item.sharedPortion?.quantity || 0;
+    return (individualAssignments + sharedQuantity) === item.totalQty;
   });
+
+  // --- RENDER LOGIC ---
 
   return (
     <div className={styles.appContainer}>
@@ -159,9 +200,12 @@ function App() {
             items={billDetails.items}
             people={people}
             activePersonId={activePersonId}
+            activeShareMode={activeShareMode}
             onItemsUpdate={handleItemsUpdate}
             onPeopleUpdate={handlePeopleUpdate}
             onSetActivePerson={setActivePersonId}
+            onInitiateShare={handleInitiateShare}
+            onSetActiveShareMode={setActiveShareMode}
           />
         )}
         
