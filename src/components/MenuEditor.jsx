@@ -1,8 +1,62 @@
-import { useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import styles from './MenuEditor.module.css';
 
-// --- Sub-Component for a single editable item row (No changes) ---
+// --- NEW: A smarter input component to handle editing ---
+function EditableNumberInput({ value, onChange, min = 0, step = 1, ...props }) {
+  // Local state to hold the string value, allowing it to be empty
+  const [displayValue, setDisplayValue] = useState(value.toString());
+
+  // Keep the local state in sync if the parent's value changes
+  useEffect(() => {
+    // Only update if the numeric value is different, to avoid interrupting typing
+    if (parseFloat(displayValue) !== value) {
+      setDisplayValue(value.toString());
+    }
+  }, [value, displayValue]);
+
+  const handleChange = (e) => {
+    // Update the local display value with whatever the user types
+    setDisplayValue(e.target.value);
+    
+    // Convert to a number for the parent state, defaulting to 0 if empty
+    const numericValue = e.target.value === '' ? 0 : parseFloat(e.target.value);
+    if (!isNaN(numericValue)) {
+      onChange(numericValue);
+    }
+  };
+
+  const handleBlur = () => {
+    // When the user clicks away, if the input is empty or invalid, reset it to the minimum value
+    const numericValue = parseFloat(displayValue);
+    if (isNaN(numericValue) || numericValue < min) {
+      setDisplayValue(min.toString());
+      onChange(min);
+    }
+  };
+
+  return (
+    <input
+      type="number"
+      value={displayValue}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      min={min}
+      step={step}
+      {...props}
+    />
+  );
+}
+
+EditableNumberInput.propTypes = {
+  value: PropTypes.number.isRequired,
+  onChange: PropTypes.func.isRequired,
+  min: PropTypes.number,
+  step: PropTypes.any,
+};
+
+
+// --- Sub-Component for a single editable item row ---
 function BillItemRow({ item, onItemChange, onRemoveItem }) {
   return (
     <div className={styles.itemRow}>
@@ -14,21 +68,19 @@ function BillItemRow({ item, onItemChange, onRemoveItem }) {
         className={styles.inputName}
         aria-label="Item Name"
       />
-      <input
-        type="number"
+      <EditableNumberInput
         value={item.price}
-        onChange={(e) => onItemChange(item.id, 'price', parseFloat(e.target.value) || 0)}
+        onChange={(newValue) => onItemChange(item.id, 'price', newValue)}
         step="0.01"
-        min="0"
+        min={0}
         className={styles.inputPrice}
         aria-label="Item Price"
       />
-      <input
-        type="number"
+      <EditableNumberInput
         value={item.totalQty}
-        onChange={(e) => onItemChange(item.id, 'totalQty', parseInt(e.target.value, 10) || 1)}
+        onChange={(newValue) => onItemChange(item.id, 'totalQty', newValue)}
         step="1"
-        min="1"
+        min={1}
         className={styles.inputQty}
         aria-label="Total Quantity"
       />
@@ -50,15 +102,14 @@ BillItemRow.propTypes = {
 function MenuEditor({
   items,
   memberCount,
-  manualTaxAmount, // Prop for the editable tax value
+  manualTaxAmount,
   includeTax,
   onItemsUpdate,
   onMemberCountChange,
-  onManualTaxChange, // Handler for the editable tax
+  onManualTaxChange,
   onIncludeTaxChange,
   onConfirm,
 }) {
-  // --- (handleItemChange, handleRemoveItem, handleAddItem functions are the same) ---
   const handleItemChange = (itemId, field, value) => {
     const updatedItems = items.map((item) =>
       item.id === itemId ? { ...item, [field]: value } : item
@@ -85,10 +136,12 @@ function MenuEditor({
       <div className="card">
         <h2>1. Set Group Size</h2>
         <p>Enter the total number of people splitting the bill (including yourself).</p>
-        <input
-          type="number" min="1" step="1" value={memberCount}
-          onChange={(e) => onMemberCountChange(parseInt(e.target.value, 10) || 1)}
-          className={styles.memberCountInput} aria-label="Number of members"
+        <EditableNumberInput
+          value={memberCount}
+          onChange={onMemberCountChange}
+          min={1}
+          className={styles.memberCountInput} 
+          aria-label="Number of members"
         />
       </div>
 
@@ -112,19 +165,18 @@ function MenuEditor({
           + Add Item Manually
         </button>
 
-        {/* --- UPDATED: Bill Summary and Tax Section --- */}
         <div className={styles.summarySection}>
           <div className={`${styles.summaryRow} ${styles.totalRow}`}>
-            <label htmlFor="tax-input">Total Tax (CGST + SGST)</label>
-            <input
-              id="tax-input"
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="e.g., 46.00"
+            <label htmlFor="tax-input">Total Tax</label>
+            <EditableNumberInput
               value={manualTaxAmount}
-              onChange={(e) => onManualTaxChange(parseFloat(e.target.value) || 0)}
-              className={styles.taxInput} // A new style for this input
+              onChange={onManualTaxChange}
+              step="0.01"
+              min={0}
+              className={styles.taxInput}
+              aria-label="Total Tax Amount"
+              id="tax-input"
+              placeholder="e.g., 46.00"
             />
           </div>
 
@@ -151,7 +203,6 @@ function MenuEditor({
   );
 }
 
-// Updated PropTypes to use the new manual tax props
 MenuEditor.propTypes = {
   items: PropTypes.arrayOf(PropTypes.object).isRequired,
   memberCount: PropTypes.number.isRequired,

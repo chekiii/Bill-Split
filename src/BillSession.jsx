@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import styles from './App.module.css';
 
-// Import all components
+// Import all components, including the new FooterPortal
+import FooterPortal from './components/FooterPortal';
 import BillUpload from './components/BillUpload';
 import ScanProcessor from './components/ScanProcessor';
 import MenuEditor from './components/MenuEditor';
@@ -12,8 +13,8 @@ import ResultSummary from './components/ResultSummary';
 import ErrorNotification from './components/ui/ErrorNotification';
 
 function BillSession() {
-  const { sessionId: urlSessionId } = useParams(); // Read the sessionId from the URL
-  const navigate = useNavigate(); // Hook to allow programmatic navigation
+  const { sessionId: urlSessionId } = useParams();
+  const navigate = useNavigate();
 
   // State for managing the multi-step workflow
   const [currentStep, setCurrentStep] = useState(1);
@@ -40,28 +41,20 @@ function BillSession() {
     grandTotal: 0,
   });
 
-  // This effect runs when the component loads to handle shared links
+  // Effect to handle joining a session from a shared link
   useEffect(() => {
     if (urlSessionId) {
-      // A user has joined using a link.
       console.log("Joining session from URL:", urlSessionId);
-      
-      // TODO: This is where you would fetch the bill data from a backend using the urlSessionId.
-      // Since we have no backend, we'll simulate it by jumping to the member selection screen.
-      // The Payer's local state will be used. This will be updated when a backend is added.
-      
+      // TODO: In a real backend, you'd fetch data here.
       setSessionId(urlSessionId);
-      setCurrentStep(5); // Jump directly to the "Member Selection" screen
+      setCurrentStep(5); // Jump to Member Selection
     }
-  }, [urlSessionId]); // This effect only runs once when the component mounts with a URL parameter
+  }, [urlSessionId]);
 
   // --- HANDLER FUNCTIONS ---
 
   const handleReset = () => {
-    // Navigate back to the homepage to clear the URL
     navigate('/');
-    
-    // Reset all state variables
     setCurrentStep(1);
     setImageFile(null);
     setPeople([]);
@@ -143,7 +136,6 @@ function BillSession() {
   const handleConfirmAndShare = () => {
     const newSessionId = crypto.randomUUID();
     setSessionId(newSessionId);
-    // Update the URL without a full page reload
     navigate(`/bill/${newSessionId}`);
     setCurrentStep(4);
   };
@@ -167,20 +159,12 @@ function BillSession() {
     setCurrentStep((prev) => prev - 1);
   };
 
-  const isAssignmentComplete = billDetails.items.every(item => {
-    if (item.totalQty === 0) return true;
-    const individualAssignments = Object.values(item.assignments || {}).reduce((sum, qty) => sum + qty, 0);
-    const sharedQuantity = item.sharedPortion?.quantity || 0;
-    return (individualAssignments + sharedQuantity) === item.totalQty;
-  });
-
   // --- RENDER LOGIC ---
 
   return (
     <>
       {error && <ErrorNotification message={error} onDismiss={handleReset} />}
       
-      {/* Show step indicator only on relevant steps */}
       {currentStep > 2 && currentStep < 6 &&
         <div className={styles.stepIndicator}>
           {currentStep === 3 && "Payer Setup"}
@@ -234,37 +218,36 @@ function BillSession() {
         />
       )}
       
-      <footer className={styles.navigation}>
-        {currentStep === 3 && (
-          <button className="button" onClick={handleReset}>Start Over</button>
-        )}
-        
-        {currentStep === 4 && (
-          <>
-            <button className="button" onClick={() => setCurrentStep(3)}>Back to Edit</button>
-            <button className="button" onClick={() => setCurrentStep(5)}>Next: Join & Select</button>
-          </>
-        )}
+      <FooterPortal>
+        <div className={styles.navigation}>
+          {currentStep === 3 && (
+            <button className="button" onClick={handleReset}>Start Over</button>
+          )}
+          
+          {currentStep === 4 && (
+            <>
+              <button className="button" onClick={() => setCurrentStep(3)}>Back to Edit</button>
+              <button className="button" onClick={() => setCurrentStep(5)}>Next: Join & Select</button>
+            </>
+          )}
 
-        {currentStep === 5 && (
-          <>
-            <button className="button" onClick={() => setCurrentStep(4)}>Back to Share</button>
-            <button
-              className="button"
-              onClick={handleViewFullSummary}
-            >
-              View Full Summary
-            </button>
-          </>
-        )}
-        
-        {currentStep === 6 && (
-          <>
-            <button className="button" onClick={() => setCurrentStep(5)}>Back</button>
-            <button className="button" onClick={handleReset}>Split Another Bill</button>
-          </>
-        )}
-      </footer>
+          {currentStep === 5 && (
+            <>
+              <button className="button" onClick={() => setCurrentStep(4)}>Back to Share</button>
+              <button className="button" onClick={handleViewFullSummary}>
+                View Full Summary
+              </button>
+            </>
+          )}
+          
+          {currentStep === 6 && (
+            <>
+              <button className="button" onClick={() => setCurrentStep(5)}>Back</button>
+              <button className="button" onClick={handleReset}>Split Another Bill</button>
+            </>
+          )}
+        </div>
+      </FooterPortal>
     </>
   );
 }

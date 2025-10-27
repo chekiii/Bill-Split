@@ -34,6 +34,8 @@
   max-width: 600px; /* Constrain content width on larger screens */
   margin: 0 auto;
   box-sizing: border-box;
+
+  overflow-x: hidden;
 }
 
 /* Container for step 3 to hold both components */

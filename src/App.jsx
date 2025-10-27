@@ -1,5 +1,5 @@
-import { Routes, Route, useParams } from 'react-router-dom';
-import BillSession from './BillSession'; // We will create this component next
+import { Routes, Route } from 'react-router-dom';
+import BillSession from './BillSession';
 import styles from './App.module.css';
 
 function App() {
@@ -8,15 +8,16 @@ function App() {
       <header className={styles.header}>
         <h1>BillSnap ⚡️</h1>
       </header>
+
       <main className={styles.mainContent}>
         <Routes>
-          {/* Route for the homepage (a new bill) */}
           <Route path="/" element={<BillSession />} />
-          
-          {/* Route for a shared bill link */}
           <Route path="/bill/:sessionId" element={<BillSession />} />
         </Routes>
       </main>
+
+      {/* THE FIX: Create an empty footer here to act as our portal's target. */}
+      <footer id="footer-portal-root"></footer>
     </div>
   );
 }
