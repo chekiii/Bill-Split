@@ -51,7 +51,7 @@ function BillSession() {
         setLoading(true);
         try {
           console.log('Fetching session from backend:', urlSessionId);
-          const res = await fetch(`/api/get-session?id=${urlSessionId}`);
+          const res = await fetch(`/api/get-session.js?id=${urlSessionId}`);
 
           if (!res.ok) {
             throw new Error('Session not found');
