@@ -186,7 +186,7 @@ function BillSession() {
         people,
       };
 
-      const response = await fetch('/api/save-session', {
+      const response = await fetch('/api/save-session.js', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(sessionPayload),
