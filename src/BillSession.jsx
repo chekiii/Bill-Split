@@ -42,40 +42,45 @@ function BillSession() {
     grandTotal: 0,
   });
 
-  // --- LOAD SHARED SESSION DATA FROM BACKEND ---
+// --- LOAD SHARED SESSION DATA ---
   useEffect(() => {
     const fetchSession = async () => {
-      if (!urlSessionId) return;
+      // THE FIX: Only run if there's a URL ID AND the app is on the initial step.
+      // This prevents it from running when the Payer creates the link.
+      if (urlSessionId && currentStep === 1) {
+        setLoading(true);
+        try {
+          console.log('Fetching session from backend:', urlSessionId);
+          const res = await fetch(`/api/get-session?id=${urlSessionId}`);
 
-      setLoading(true);
-      try {
-        const res = await fetch(`/api/get-session?id=${urlSessionId}`);
+          if (!res.ok) {
+            throw new Error('Session not found');
+          }
 
-        if (!res.ok) {
-          throw new Error('Session not found or has expired.');
+          const sessionData = await res.json();
+
+          // Restore all saved data
+          setSessionId(urlSessionId);
+          setBillDetails(sessionData.billDetails || { items: [], subtotal: 0, taxes: [], grandTotal: 0 });
+          setMemberCount(sessionData.memberCount || 2);
+          setManualTaxAmount(sessionData.manualTaxAmount || 0);
+          setIncludeTax(sessionData.includeTax ?? true);
+          setPeople(sessionData.people || []);
+
+          setCurrentStep(5); // Go directly to member selection
+        } catch (err) {
+          console.error('Error fetching session:', err);
+          setError('Failed to load shared session. Please check your link.');
+          navigate('/');
+        } finally {
+          setLoading(false);
         }
-
-        const sessionData = await res.json();
-
-        // Restore all saved data from the backend
-        setSessionId(urlSessionId);
-        setBillDetails(sessionData.billDetails || { items: [], subtotal: 0, taxes: [], grandTotal: 0 });
-        setMemberCount(sessionData.memberCount || 2);
-        setManualTaxAmount(sessionData.manualTaxAmount || 0);
-        setIncludeTax(sessionData.includeTax ?? true);
-        setPeople(sessionData.people || []);
-
-        setCurrentStep(5); // Go directly to member selection
-      } catch (err) {
-        setError(err.message);
-        navigate('/'); // Go back to the homepage on error
-      } finally {
-        setLoading(false);
       }
     };
 
     fetchSession();
-  }, [urlSessionId, navigate]);
+  }, [urlSessionId, currentStep, navigate]); // Add currentStep to the dependency array
+ 
 
   // --- HANDLER FUNCTIONS ---
 
