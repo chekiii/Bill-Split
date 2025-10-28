@@ -1,23 +1,44 @@
+import { ObjectId } from 'mongodb';
 import clientPromise from './_lib/mongodb.js';
 
 export default async function handler(request, response) {
-  if (request.method !== 'POST') {
-    return response.status(405).json({ message: 'Method Not Allowed' });
+  const client = await clientPromise;
+  const db = client.db("billsnap");
+  const sessions = db.collection("sessions");
+
+  // --- LOGIC FOR CREATING A NEW SESSION (POST) ---
+  if (request.method === 'POST') {
+    try {
+      const sessionData = request.body;
+      const result = await sessions.insertOne({ ...sessionData, createdAt: new Date() });
+      return response.status(200).json({ sessionId: result.insertedId });
+    } catch (error) {
+      console.error(error);
+      return response.status(500).json({ message: 'Error creating session' });
+    }
   }
 
-  try {
-    const client = await clientPromise;
-    const db = client.db("billsnap"); // You can name your database anything you like
-    const sessions = db.collection("sessions");
+  // --- NEW LOGIC FOR UPDATING AN EXISTING SESSION (PUT) ---
+  if (request.method === 'PUT') {
+    try {
+      const { sessionId, ...sessionData } = request.body;
+      if (!sessionId) {
+        return response.status(400).json({ message: 'Session ID is required for updates' });
+      }
 
-    const sessionData = request.body;
-    // Insert the data into the 'sessions' collection
-    const result = await sessions.insertOne({ ...sessionData, createdAt: new Date() });
-
-    // Return the unique ID of the newly created session
-    return response.status(200).json({ sessionId: result.insertedId });
-  } catch (error) {
-    console.error(error);
-    return response.status(500).json({ message: 'Error saving session' });
+      // Find the session by its ID and replace its data with the new data
+      await sessions.updateOne(
+        { _id: new ObjectId(sessionId) },
+        { $set: sessionData }
+      );
+      
+      return response.status(200).json({ message: 'Session updated successfully' });
+    } catch (error) {
+      console.error(error);
+      return response.status(500).json({ message: 'Error updating session' });
+    }
   }
+
+  // If the request method is not POST or PUT, reject it.
+  return response.status(405).json({ message: 'Method Not Allowed' });
 }

@@ -12,6 +12,8 @@ import MemberSelectionMenu from './components/MemberSelectionMenu';
 import ResultSummary from './components/ResultSummary';
 import ErrorNotification from './components/ui/ErrorNotification';
 
+import { useDebouncedEffect } from './hooks/useDebouncedEffect.js'; // Import the new hook
+
 function BillSession() {
   const { sessionId: urlSessionId } = useParams();
   const navigate = useNavigate();
@@ -42,19 +44,18 @@ function BillSession() {
     grandTotal: 0,
   });
 
-// --- LOAD SHARED SESSION DATA ---
+  // --- LOAD SHARED SESSION DATA ---
   useEffect(() => {
     const fetchSession = async () => {
-      // THE FIX: Only run if there's a URL ID AND the app is on the initial step.
-      // This prevents it from running when the Payer creates the link.
+      // Only run if there's a URL ID AND the app is on the initial step.
       if (urlSessionId && currentStep === 1) {
         setLoading(true);
         try {
-          console.log('Fetching session from backend:', urlSessionId);
+          // BUG FIX: The URL should not include '.js'
           const res = await fetch(`/api/get-session.js?id=${urlSessionId}`);
 
           if (!res.ok) {
-            throw new Error('Session not found');
+            throw new Error('Session not found or has expired.');
           }
 
           const sessionData = await res.json();
@@ -69,19 +70,75 @@ function BillSession() {
 
           setCurrentStep(5); // Go directly to member selection
         } catch (err) {
-          console.error('Error fetching session:', err);
-          setError('Failed to load shared session. Please check your link.');
+          setError(err.message);
           navigate('/');
         } finally {
           setLoading(false);
         }
       }
     };
-
     fetchSession();
-  }, [urlSessionId, currentStep, navigate]); // Add currentStep to the dependency array
- 
+  }, [urlSessionId, currentStep, navigate]);
 
+
+  // 2. POLLING LOGIC: Fetch updates from the server every 3 seconds
+  useEffect(() => {
+    if (!urlSessionId || (currentStep !== 5 && currentStep !== 6)) {
+      return; // Stop if we're not in a live session
+    }
+
+    const intervalId = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/get-session.js?id=${urlSessionId}`);
+        if (!res.ok) return;
+        const sessionData = await res.json();
+
+        // Optimization: Only update state if the data from the server is different
+        if (JSON.stringify(sessionData.people) !== JSON.stringify(people)) {
+          setPeople(sessionData.people);
+        }
+        if (JSON.stringify(sessionData.billDetails) !== JSON.stringify(billDetails)) {
+          setBillDetails(sessionData.billDetails);
+        }
+      } catch (err) {
+        console.error("Polling error:", err);
+      }
+    }, 3000); // Poll every 3 seconds
+
+    return () => clearInterval(intervalId); // Cleanup
+  }, [currentStep, urlSessionId, people, billDetails]);
+ 
+  useDebouncedEffect(() => {
+    // Only send updates if we have a session ID and we are in the member phase
+    if (!sessionId || (currentStep !== 5 && currentStep !== 6)) {
+      return;
+    }
+
+    const updateSession = async () => {
+      console.log("Debounced: Sending updates to the server...");
+      const sessionPayload = {
+        sessionId,
+        billDetails,
+        people,
+        // Include other data that might need updating
+        memberCount,
+        manualTaxAmount,
+        includeTax,
+      };
+
+      try {
+        await fetch('/api/save-session', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(sessionPayload),
+        });
+      } catch (err) {
+        console.error("Failed to save updates:", err);
+      }
+    };
+    
+    updateSession();
+  }, [people, billDetails], 1000);
   // --- HANDLER FUNCTIONS ---
 
   const handleReset = () => {
