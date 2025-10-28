@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import styles from './App.module.css';
 
-// Import all components, including the new FooterPortal
+// Import all components
 import FooterPortal from './components/FooterPortal';
 import BillUpload from './components/BillUpload';
 import ScanProcessor from './components/ScanProcessor';
@@ -16,24 +16,25 @@ function BillSession() {
   const { sessionId: urlSessionId } = useParams();
   const navigate = useNavigate();
 
-  // State for managing the multi-step workflow
+  // --- STATE MANAGEMENT ---
   const [currentStep, setCurrentStep] = useState(1);
   const [imageFile, setImageFile] = useState(null);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState(null);
 
-  // State for the Payer's setup
+  // Payer setup state
   const [memberCount, setMemberCount] = useState(2);
   const [manualTaxAmount, setManualTaxAmount] = useState(0);
   const [includeTax, setIncludeTax] = useState(true);
 
-  // State for the Member's view
+  // Member data state
   const [people, setPeople] = useState([]);
   const [activePersonId, setActivePersonId] = useState(null);
   const [summaryPersonId, setSummaryPersonId] = useState(null);
   const [activeShareMode, setActiveShareMode] = useState(null);
 
-  // Central state for all data parsed from the bill
+  // Bill details state
   const [billDetails, setBillDetails] = useState({
     items: [],
     subtotal: 0,
@@ -41,15 +42,40 @@ function BillSession() {
     grandTotal: 0,
   });
 
-  // Effect to handle joining a session from a shared link
+  // --- LOAD SHARED SESSION DATA FROM BACKEND ---
   useEffect(() => {
-    if (urlSessionId) {
-      console.log("Joining session from URL:", urlSessionId);
-      // TODO: In a real backend, you'd fetch data here.
-      setSessionId(urlSessionId);
-      setCurrentStep(5); // Jump to Member Selection
-    }
-  }, [urlSessionId]);
+    const fetchSession = async () => {
+      if (!urlSessionId) return;
+
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/get-session?id=${urlSessionId}`);
+
+        if (!res.ok) {
+          throw new Error('Session not found or has expired.');
+        }
+
+        const sessionData = await res.json();
+
+        // Restore all saved data from the backend
+        setSessionId(urlSessionId);
+        setBillDetails(sessionData.billDetails || { items: [], subtotal: 0, taxes: [], grandTotal: 0 });
+        setMemberCount(sessionData.memberCount || 2);
+        setManualTaxAmount(sessionData.manualTaxAmount || 0);
+        setIncludeTax(sessionData.includeTax ?? true);
+        setPeople(sessionData.people || []);
+
+        setCurrentStep(5); // Go directly to member selection
+      } catch (err) {
+        setError(err.message);
+        navigate('/'); // Go back to the homepage on error
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSession();
+  }, [urlSessionId, navigate]);
 
   // --- HANDLER FUNCTIONS ---
 
@@ -79,7 +105,7 @@ function BillSession() {
     const itemsWithShareData = (scannedBill.items || []).map(item => ({
       ...item,
       assignments: {},
-      sharedPortion: { quantity: 0, shareCount: 0, sharers: [] }
+      sharedPortion: { quantity: 0, shareCount: 0, sharers: [] },
     }));
     setBillDetails({ ...scannedBill, items: itemsWithShareData });
 
@@ -99,8 +125,8 @@ function BillSession() {
 
   const handlePeopleUpdate = (updatedPeople) => {
     const newPeople = updatedPeople.map(p => ({
-        ...p,
-        status: people.find(op => op.id === p.id)?.status || 'selecting',
+      ...p,
+      status: people.find(op => op.id === p.id)?.status || 'selecting',
     }));
     setPeople(newPeople);
 
@@ -109,6 +135,17 @@ function BillSession() {
     } else if (activePersonId && !newPeople.find(p => p.id === activePersonId)) {
       setActivePersonId(null);
     }
+  };
+
+  const handleViewPersonSummary = (personId) => {
+    if (!personId) return; // Don't do anything if no person is active
+    setPeople(currentPeople =>
+      currentPeople.map(p =>
+        p.id === personId ? { ...p, status: 'viewed' } : p
+      )
+    );
+    setSummaryPersonId(personId);
+    setCurrentStep(6);
   };
 
   const handleViewFullSummary = () => {
@@ -122,22 +159,46 @@ function BillSession() {
     setSummaryPersonId(null);
     setCurrentStep(6);
   };
-  
+
   const handlePingPayer = (personId) => {
-      setPeople(currentPeople => 
-          currentPeople.map(p => 
-              p.id === personId ? { ...p, status: 'pinged' } : p
-          )
-      );
-      const personName = people.find(p => p.id === personId)?.name;
-      alert(`The payer has been notified that ${personName} has claimed their share!`);
+    setPeople(currentPeople =>
+      currentPeople.map(p =>
+        p.id === personId ? { ...p, status: 'pinged' } : p
+      )
+    );
+    const personName = people.find(p => p.id === personId)?.name;
+    alert(`The payer has been notified that ${personName} has claimed their share!`);
   };
 
-  const handleConfirmAndShare = () => {
-    const newSessionId = crypto.randomUUID();
-    setSessionId(newSessionId);
-    navigate(`/bill/${newSessionId}`);
-    setCurrentStep(4);
+  const handleConfirmAndShare = async () => {
+    setLoading(true);
+    try {
+      const sessionPayload = {
+        billDetails,
+        memberCount,
+        manualTaxAmount,
+        includeTax,
+        people,
+      };
+
+      const response = await fetch('/api/save-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(sessionPayload),
+      });
+
+      if (!response.ok) throw new Error('Failed to save session');
+
+      const { sessionId } = await response.json();
+
+      setSessionId(sessionId);
+      navigate(`/bill/${sessionId}`);
+      setCurrentStep(4);
+    } catch (err) {
+      setError('Could not save session. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleInitiateShare = (itemId, quantity, shareCount) => {
@@ -145,7 +206,7 @@ function BillSession() {
       if (item.id === itemId) {
         return {
           ...item,
-          sharedPortion: { quantity, shareCount, sharers: [activePersonId] }
+          sharedPortion: { quantity, shareCount, sharers: [activePersonId] },
         };
       }
       return item;
@@ -156,26 +217,37 @@ function BillSession() {
 
   const prevStep = () => {
     setSummaryPersonId(null);
-    setCurrentStep((prev) => prev - 1);
+    setCurrentStep(prev => prev - 1);
   };
 
   // --- RENDER LOGIC ---
 
+  if (loading) {
+    // Simple full-screen loading state for API calls
+    return <div className={styles.loading}>Loading...</div>;
+  }
+
   return (
     <>
       {error && <ErrorNotification message={error} onDismiss={handleReset} />}
-      
-      {currentStep > 2 && currentStep < 6 &&
+
+      {currentStep > 2 && currentStep < 6 && (
         <div className={styles.stepIndicator}>
-          {currentStep === 3 && "Payer Setup"}
-          {currentStep === 4 && "Share Link"}
-          {currentStep === 5 && "Member Selection"}
+          {currentStep === 3 && 'Payer Setup'}
+          {currentStep === 4 && 'Share Link'}
+          {currentStep === 5 && 'Member Selection'}
         </div>
-      }
+      )}
 
       {currentStep === 1 && <BillUpload onImageSelect={handleImageSelect} />}
-      {currentStep === 2 && imageFile && <ScanProcessor imageFile={imageFile} onScanComplete={handleScanComplete} onScanError={handleScanError} />}
-      
+      {currentStep === 2 && imageFile && (
+        <ScanProcessor
+          imageFile={imageFile}
+          onScanComplete={handleScanComplete}
+          onScanError={handleScanError}
+        />
+      )}
+
       {currentStep === 3 && (
         <MenuEditor
           items={billDetails.items}
@@ -191,7 +263,7 @@ function BillSession() {
       )}
 
       {currentStep === 4 && sessionId && <ShareSession sessionId={sessionId} />}
-      
+
       {currentStep === 5 && (
         <MemberSelectionMenu
           items={billDetails.items}
@@ -205,7 +277,7 @@ function BillSession() {
           onSetActiveShareMode={setActiveShareMode}
         />
       )}
-      
+
       {currentStep === 6 && (
         <ResultSummary
           items={billDetails.items}
@@ -217,13 +289,13 @@ function BillSession() {
           onPingPayer={handlePingPayer}
         />
       )}
-      
+
       <FooterPortal>
         <div className={styles.navigation}>
           {currentStep === 3 && (
             <button className="button" onClick={handleReset}>Start Over</button>
           )}
-          
+
           {currentStep === 4 && (
             <>
               <button className="button" onClick={() => setCurrentStep(3)}>Back to Edit</button>
@@ -234,12 +306,21 @@ function BillSession() {
           {currentStep === 5 && (
             <>
               <button className="button" onClick={() => setCurrentStep(4)}>Back to Share</button>
+              
+              <button
+                className="button"
+                onClick={() => handleViewPersonSummary(activePersonId)}
+                disabled={!activePersonId}
+                title={!activePersonId ? "Select a person first" : "View your personal share"}
+              >
+                View My Share
+              </button>              
               <button className="button" onClick={handleViewFullSummary}>
                 View Full Summary
               </button>
             </>
           )}
-          
+
           {currentStep === 6 && (
             <>
               <button className="button" onClick={() => setCurrentStep(5)}>Back</button>

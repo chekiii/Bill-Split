@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
-import { processImageWithOCR, parseOcrResult } from '../api/ocrService';
+import { processImageWithOCR, parseOcrResult } from '../services/ocrService';
 import Spinner from './ui/Spinner'; // Assuming you create this simple component
 
 /**

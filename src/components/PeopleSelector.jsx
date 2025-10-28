@@ -2,15 +2,6 @@ import { useState } from 'react';
 import PropTypes from 'prop-types';
 import styles from './PeopleSelector.module.css';
 
-/**
- * Manages adding people and allows setting the active person.
- * @param {{
- * people: Array<{id: string, name: string}>;
- * activePersonId: string | null; // NEW: To know who is active
- * onPeopleUpdate: (people: Array<{id: string, name: string}>) => void;
- * onSetActivePerson: (personId: string) => void; // NEW: Handler to set active person
- * }} props
- */
 function PeopleSelector({ people, activePersonId, onPeopleUpdate, onSetActivePerson }) {
   const [newPersonName, setNewPersonName] = useState('');
   const [error, setError] = useState('');
@@ -23,6 +14,7 @@ function PeopleSelector({ people, activePersonId, onPeopleUpdate, onSetActivePer
     const isDuplicate = people.some(
       (person) => person.name.toLowerCase() === trimmedName.toLowerCase()
     );
+
     if (isDuplicate) {
       setError('This name has already been added.');
       return;
@@ -42,7 +34,9 @@ function PeopleSelector({ people, activePersonId, onPeopleUpdate, onSetActivePer
 
   const handleNameInputChange = (e) => {
     setNewPersonName(e.target.value);
-    if (error) setError('');
+    if (error) {
+      setError('');
+    }
   };
 
   return (
@@ -62,10 +56,8 @@ function PeopleSelector({ people, activePersonId, onPeopleUpdate, onSetActivePer
 
       <ul className={styles.peopleList}>
         {people.map((person) => (
-          // THE FIX: This now sets the active person instead of viewing the summary
           <li
             key={person.id}
-            // Apply a special style if this person is the active one
             className={`${styles.personTag} ${person.id === activePersonId ? styles.active : ''}`}
             onClick={() => onSetActivePerson(person.id)}
             title={`Set ${person.name} as active`}
@@ -85,7 +77,6 @@ function PeopleSelector({ people, activePersonId, onPeopleUpdate, onSetActivePer
   );
 }
 
-// Updated PropTypes
 PeopleSelector.propTypes = {
   people: PropTypes.array.isRequired,
   activePersonId: PropTypes.string,
