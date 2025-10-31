@@ -12,7 +12,7 @@ import MemberSelectionMenu from './components/MemberSelectionMenu';
 import ResultSummary from './components/ResultSummary';
 import ErrorNotification from './components/ui/ErrorNotification';
 
-import { useDebouncedEffect } from './hooks/useDebouncedEffect.js'; // Import the new hook
+import Pusher from 'pusher-js'; // Import the Pusher client-side library
 
 function BillSession() {
   const { sessionId: urlSessionId } = useParams();
@@ -80,65 +80,58 @@ function BillSession() {
     fetchSession();
   }, [urlSessionId, currentStep, navigate]);
 
-
-  // 2. POLLING LOGIC: Fetch updates from the server every 3 seconds
+  // 2. PUSHER REAL-TIME LISTENER (Replaces the old polling logic)
   useEffect(() => {
-    if (!urlSessionId || (currentStep !== 5 && currentStep !== 6)) {
-      return; // Stop if we're not in a live session
-    }
+    // Only connect if we are in a shared session
+    if (!urlSessionId) return;
 
-    const intervalId = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/get-session.js?id=${urlSessionId}`);
-        if (!res.ok) return;
-        const sessionData = await res.json();
+    // Initialize Pusher with your PUBLIC key
+    const pusherClient = new Pusher(import.meta.env.VITE_PUSHER_KEY, {
+      cluster: import.meta.env.VITE_PUSHER_CLUSTER,
+    });
 
-        // Optimization: Only update state if the data from the server is different
-        if (JSON.stringify(sessionData.people) !== JSON.stringify(people)) {
-          setPeople(sessionData.people);
-        }
-        if (JSON.stringify(sessionData.billDetails) !== JSON.stringify(billDetails)) {
-          setBillDetails(sessionData.billDetails);
-        }
-      } catch (err) {
-        console.error("Polling error:", err);
-      }
-    }, 3000); // Poll every 3 seconds
+    const channel = pusherClient.subscribe(`session-${urlSessionId}`);
 
-    return () => clearInterval(intervalId); // Cleanup
-  }, [currentStep, urlSessionId, people, billDetails]);
- 
-  useDebouncedEffect(() => {
-    // Only send updates if we have a session ID and we are in the member phase
-    if (!sessionId || (currentStep !== 5 && currentStep !== 6)) {
-      return;
-    }
+    // When a 'session-update' event is received, update the local state
+    channel.bind('session-update', (updatedData) => {
+      console.log('Pusher received an update:', updatedData);
+      setPeople(updatedData.people || []);
+      setBillDetails(updatedData.billDetails || { items: [] });
+    });
 
-    const updateSession = async () => {
-      console.log("Debounced: Sending updates to the server...");
-      const sessionPayload = {
-        sessionId,
-        billDetails,
-        people,
-        // Include other data that might need updating
-        memberCount,
-        manualTaxAmount,
-        includeTax,
-      };
-
-      try {
-        await fetch('/api/save-session', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(sessionPayload),
-        });
-      } catch (err) {
-        console.error("Failed to save updates:", err);
-      }
+    // Cleanup: Unsubscribe when the component unmounts
+    return () => {
+      pusherClient.unsubscribe(`session-${urlSessionId}`);
+      pusherClient.disconnect();
     };
-    
-    updateSession();
-  }, [people, billDetails], 1000);
+  }, [urlSessionId]);
+
+
+  // 3. DEBOUNCED UPDATE SENDER (Sends updates to the server)
+  useEffect(() => {
+    // This debounces the updates. It waits 1 second after the user stops making changes
+    // before sending a single, efficient update to the backend.
+    const handler = setTimeout(() => {
+      if (!sessionId || (currentStep !== 5 && currentStep !== 6)) return;
+
+      const updateSession = async () => {
+        const sessionPayload = { sessionId, billDetails, people, memberCount, manualTaxAmount, includeTax };
+        try {
+          await fetch('/api/save-session', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(sessionPayload),
+          });
+        } catch (err) {
+          console.error("Failed to save updates:", err);
+        }
+      };
+      
+      updateSession();
+    }, 1000);
+
+    return () => clearTimeout(handler);
+  }, [people, billDetails, sessionId, currentStep, memberCount, manualTaxAmount, includeTax]);
   // --- HANDLER FUNCTIONS ---
 
   const handleReset = () => {
