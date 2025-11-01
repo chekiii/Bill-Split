@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import styles from './App.module.css';
 
@@ -44,6 +44,13 @@ function BillSession() {
     grandTotal: 0,
   });
 
+  // NEW: State to hold the Pusher client instance
+  const [pusherClient, setPusherClient] = useState(null);
+
+  // 2. THE FIX: Create a 'guard' ref
+  // This ref will help us prevent the "echo" loop.
+  const isReceivingUpdate = useRef(false);
+
   // --- LOAD SHARED SESSION DATA ---
   useEffect(() => {
     const fetchSession = async () => {
@@ -51,7 +58,7 @@ function BillSession() {
       if (urlSessionId && currentStep === 1) {
         setLoading(true);
         try {
-          // BUG FIX: The URL should not include '.js'
+          // Keeping your .js extension as requested
           const res = await fetch(`/api/get-session.js?id=${urlSessionId}`);
 
           if (!res.ok) {
@@ -80,44 +87,64 @@ function BillSession() {
     fetchSession();
   }, [urlSessionId, currentStep, navigate]);
 
-  // 2. PUSHER REAL-TIME LISTENER (Replaces the old polling logic)
+  // 2. PUSHER REAL-TIME LISTENER
   useEffect(() => {
-    // Only connect if we are in a shared session
     if (!urlSessionId) return;
 
-    // Initialize Pusher with your PUBLIC key
-    const pusherClient = new Pusher(import.meta.env.VITE_PUSHER_KEY, {
+    const client = new Pusher(import.meta.env.VITE_PUSHER_KEY, {
       cluster: import.meta.env.VITE_PUSHER_CLUSTER,
     });
+    
+    // THE FIX: Save the client instance in state
+    setPusherClient(client);
 
-    const channel = pusherClient.subscribe(`session-${urlSessionId}`);
+    const channel = client.subscribe(`session-${urlSessionId}`);
 
-    // When a 'session-update' event is received, update the local state
     channel.bind('session-update', (updatedData) => {
       console.log('Pusher received an update:', updatedData);
+
+      // so we don't want to send this change back to the server.
+      isReceivingUpdate.current = true;
+
       setPeople(updatedData.people || []);
       setBillDetails(updatedData.billDetails || { items: [] });
     });
 
-    // Cleanup: Unsubscribe when the component unmounts
     return () => {
-      pusherClient.unsubscribe(`session-${urlSessionId}`);
-      pusherClient.disconnect();
+      client.unsubscribe(`session-${urlSessionId}`);
+      client.disconnect();
     };
   }, [urlSessionId]);
 
 
-  // 3. DEBOUNCED UPDATE SENDER (Sends updates to the server)
+  // 3. DEBOUNCED UPDATE SENDER
   useEffect(() => {
-    // This debounces the updates. It waits 1 second after the user stops making changes
-    // before sending a single, efficient update to the backend.
     const handler = setTimeout(() => {
       if (!sessionId || (currentStep !== 5 && currentStep !== 6)) return;
 
+      // 4. THE FIX: Check the 'guard'
+      // If we are in the middle of receiving an update,
+      // lower the guard and stop. Do not send an echo.
+      if (isReceivingUpdate.current) {
+        isReceivingUpdate.current = false;
+        return;
+      }
+      // THE FIX: Get the socket ID from the client instance
+      const socketId = pusherClient?.connection.socket_id;
+
       const updateSession = async () => {
-        const sessionPayload = { sessionId, billDetails, people, memberCount, manualTaxAmount, includeTax };
+        const sessionPayload = { 
+          sessionId, 
+          billDetails, 
+          people, 
+          memberCount, 
+          manualTaxAmount, 
+          includeTax,
+          socketId // THE FIX: Send our socket ID to the backend
+        };
         try {
-          await fetch('/api/save-session', {
+          // Keeping your .js extension as requested
+          await fetch('/api/save-session.js', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(sessionPayload),
@@ -131,7 +158,8 @@ function BillSession() {
     }, 1000);
 
     return () => clearTimeout(handler);
-  }, [people, billDetails, sessionId, currentStep, memberCount, manualTaxAmount, includeTax]);
+  }, [people, billDetails, sessionId, currentStep, memberCount, manualTaxAmount, includeTax, pusherClient]); // Add pusherClient
+
   // --- HANDLER FUNCTIONS ---
 
   const handleReset = () => {
@@ -193,7 +221,7 @@ function BillSession() {
   };
 
   const handleViewPersonSummary = (personId) => {
-    if (!personId) return; // Don't do anything if no person is active
+    if (!personId) return;
     setPeople(currentPeople =>
       currentPeople.map(p =>
         p.id === personId ? { ...p, status: 'viewed' } : p
@@ -236,6 +264,7 @@ function BillSession() {
         people,
       };
 
+      // Keeping your .js extension as requested
       const response = await fetch('/api/save-session.js', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -278,7 +307,6 @@ function BillSession() {
   // --- RENDER LOGIC ---
 
   if (loading) {
-    // Simple full-screen loading state for API calls
     return <div className={styles.loading}>Loading...</div>;
   }
 

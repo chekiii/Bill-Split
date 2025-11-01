@@ -19,10 +19,11 @@ export default async function handler(request, response) {
     }
   }
 
-  // Logic for updating an existing session (PUT) - Pusher code removed
+  // Logic for updating an existing session (PUT) - 
   if (request.method === 'PUT') {
     try {
-      const { sessionId, ...sessionData } = request.body;
+      // THE FIX: Get the socketId from the request body
+      const { sessionId, socketId, ...sessionData } = request.body;
       if (!sessionId) {
         return response.status(400).json({ message: 'Session ID is required' });
       }
@@ -31,9 +32,15 @@ export default async function handler(request, response) {
         { _id: new ObjectId(sessionId) },
         { $set: sessionData }
       );
-
-      // Trigger a Pusher event after the database update
-      await pusher.trigger(`session-${sessionId}`, 'session-update', sessionData);
+      
+      // THE FIX: Pass the socketId to the 4th argument of pusher.trigger
+      // This tells Pusher: "Send this to everyone EXCEPT the client with this ID."
+      await pusher.trigger(
+        `session-${sessionId}`,
+        'session-update',
+        sessionData,
+        { socket_id: socketId } 
+      );
 
       return response.status(200).json({ message: 'Session updated successfully' });
     } catch (error) {
